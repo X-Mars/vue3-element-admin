@@ -30,6 +30,8 @@ const mixLeftMenu = computed(() => {
   return permissionStore.mixLeftMenu;
 });
 const layout = computed(() => settingsStore.layout);
+const watermarkEnabled = computed(() => settingsStore.watermark.enabled);
+
 watch(
   () => activeTopMenu.value,
   (newVal) => {
@@ -81,27 +83,26 @@ function toggleSideBar() {
     <!-- 手机设备侧边栏打开遮罩层 -->
     <div
       v-if="classObj.mobile && classObj.openSidebar"
-      class="drawer-bg"
+      class="drawer__background"
       @click="handleOutsideClick"
     ></div>
 
     <Sidebar class="sidebar-container" />
-    <template v-if="layout === 'mix'">
-      <div class="mix-wrap">
-        <!-- :menu-list="mixLeftMenu -->
-        <!-- :menu-list="permissionStore.routes -->
-        <div class="left-wrap">
-          <LeftMenu :menu-list="mixLeftMenu" :base-path="activeTopMenu" />
-          <div class="menu-action">
-            <hamburger
-              :is-active="appStore.sidebar.opened"
-              @toggle-click="toggleSideBar"
-            />
-          </div>
+
+    <div v-if="layout === 'mix'" class="mix-wrapper">
+      <div class="mix-wrapper__left">
+        <LeftMenu :menu-list="mixLeftMenu" :base-path="activeTopMenu" />
+        <!-- 展开/收缩侧边栏菜单 -->
+        <div class="toggle-sidebar">
+          <hamburger
+            :is-active="appStore.sidebar.opened"
+            @toggle-click="toggleSideBar"
+          />
         </div>
-        <Main />
       </div>
-    </template>
+      <Main />
+    </div>
+
     <Main v-else />
   </div>
 </template>
@@ -124,24 +125,7 @@ function toggleSideBar() {
   }
 }
 
-.fixed-header {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 9;
-  width: calc(100% - #{$sideBarWidth});
-  transition: width 0.28s;
-}
-
-.hideSidebar .fixed-header {
-  width: calc(100% - 54px);
-}
-
-.mobile .fixed-header {
-  width: 100%;
-}
-
-.drawer-bg {
+.drawer__background {
   position: absolute;
   top: 0;
   z-index: 999;
@@ -172,6 +156,7 @@ function toggleSideBar() {
   .main-container {
     padding-top: 50px;
     margin-left: 0;
+    overflow: hidden;
   }
 
   // 顶部模式全局变量修改
@@ -191,12 +176,12 @@ function toggleSideBar() {
     margin-left: 0;
   }
 
-  .mix-wrap {
+  .mix-wrapper {
     display: flex;
     height: 100%;
     padding-top: 50px;
 
-    .left-wrap {
+    .mix-wrapper__left {
       position: relative;
       height: 100%;
 
@@ -204,9 +189,12 @@ function toggleSideBar() {
         height: 100%;
       }
 
-      .menu-action {
+      .toggle-sidebar {
         position: absolute;
         bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 100%;
         height: 50px;
         line-height: 50px;
@@ -230,9 +218,17 @@ function toggleSideBar() {
 }
 
 .openSidebar {
-  .mix-wrap {
-    .el-menu {
+  .mix-wrapper {
+    .mix-wrapper__left {
       width: $sideBarWidth;
+    }
+
+    :deep(.svg-icon) {
+      margin-top: -1px;
+      margin-right: 5px;
+    }
+
+    .el-menu {
       border: none;
     }
   }

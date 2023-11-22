@@ -8,8 +8,6 @@ import {
   deleteDictTypes,
 } from "@/api/dict";
 
-import DictData from "@/views/system/dict/DictData.vue";
-
 import { DictTypePageVO, DictTypeQuery, DictTypeForm } from "@/api/dict/types";
 
 defineOptions({
@@ -31,7 +29,8 @@ const queryParams = reactive<DictTypeQuery>({
 
 const dictTypeList = ref<DictTypePageVO[]>();
 
-const dialog = reactive<DialogOption>({
+const dialog = reactive({
+  title: "",
   visible: false,
 });
 
@@ -150,9 +149,10 @@ function handleDelete(dictTypeId?: number) {
   });
 }
 
-const dictDataDialog = reactive<DialogOption>({
+const dictDataDialog = {
+  title: "",
   visible: false,
-});
+};
 
 const selectedDictType = reactive({ typeCode: "", typeName: "" }); // 当前选中的字典类型
 
@@ -196,7 +196,7 @@ onMounted(() => {
       </el-form>
     </div>
 
-    <el-card shadow="never">
+    <el-card shadow="never" class="table-container">
       <template #header>
         <el-button
           v-hasPerm="['sys:dict_type:add']"
@@ -314,7 +314,7 @@ onMounted(() => {
       width="1000px"
       @close="closeDictDialog"
     >
-      <dict-data
+      <dict-item
         v-model:typeCode="selectedDictType.typeCode"
         v-model:typeName="selectedDictType.typeName"
       />

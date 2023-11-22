@@ -4,7 +4,7 @@ import {
   deleteDept,
   updateDept,
   addDept,
-  listDeptOptions,
+  getDeptOptions,
   listDepts,
 } from "@/api/dept";
 
@@ -20,7 +20,8 @@ const deptFormRef = ref(ElForm);
 
 const loading = ref(false);
 const ids = ref<number[]>([]);
-const dialog = reactive<DialogOption>({
+const dialog = reactive({
+  title: "",
   visible: false,
 });
 
@@ -62,8 +63,8 @@ function handleSelectionChange(selection: any) {
 }
 
 /** 获取部门下拉数据  */
-async function getDeptOptions() {
-  listDeptOptions().then((response) => {
+async function loadDeptOptions() {
+  getDeptOptions().then((response) => {
     deptOptions.value = [
       {
         value: 0,
@@ -81,7 +82,7 @@ async function getDeptOptions() {
  * @param deptId 部门ID
  */
 async function openDialog(parentId?: number, deptId?: number) {
-  await getDeptOptions();
+  await loadDeptOptions();
   dialog.visible = true;
   if (deptId) {
     dialog.title = "修改部门";
@@ -195,7 +196,7 @@ onMounted(() => {
       </el-form>
     </div>
 
-    <el-card>
+    <el-card shadow="never" class="table-container">
       <template #header>
         <el-button
           v-hasPerm="['sys:dept:add']"

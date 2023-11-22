@@ -1,5 +1,4 @@
 import vue from "@vitejs/plugin-vue";
-
 import { UserConfig, ConfigEnv, loadEnv, defineConfig } from "vite";
 
 import AutoImport from "unplugin-auto-import/vite";
@@ -12,18 +11,15 @@ import IconsResolver from "unplugin-icons/resolver";
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 
 import { viteMockServe } from "vite-plugin-mock";
-import visualizer from "rollup-plugin-visualizer";
+import vueJsx from "@vitejs/plugin-vue-jsx";
 
 import UnoCSS from "unocss/vite";
-import path from "path";
+import { resolve } from "path";
 
-import viteCompression from "vite-plugin-compression";
-
-const pathSrc = path.resolve(__dirname, "src");
-
+const pathSrc = resolve(__dirname, "src");
+//  https://cn.vitejs.dev/config
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   const env = loadEnv(mode, process.cwd());
-
   return {
     resolve: {
       alias: {
@@ -33,7 +29,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     css: {
       // CSS 预处理器
       preprocessorOptions: {
-        //define global scss variable
+        // 定义全局 SCSS 变量
         scss: {
           javascriptEnabled: true,
           additionalData: `
@@ -43,94 +39,78 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       },
     },
     server: {
+      // 允许IP访问
       host: "0.0.0.0",
+      // 应用端口 (默认:3000)
       port: Number(env.VITE_APP_PORT),
-      open: true, // 运行是否自动打开浏览器
+      // 运行是否自动打开浏览器
+      open: true,
       proxy: {
-        // 反向代理解决跨域
+        /**
+         * 反向代理解决跨域配置
+         * http://localhost:3000/dev-api/users (F12可见请求路径) => http://localhost:8989/users (实际请求后端 API 路径)
+         *
+         * env.VITE_APP_BASE_API: /dev-api
+         * env.VITE_APP_API_URL: http://localhost:8989
+         */
         [env.VITE_APP_BASE_API]: {
-          target: env.VITE_APP_TARGET_URL,
           changeOrigin: true,
+          target: env.VITE_APP_API_URL,
           rewrite: (path) =>
-            path.replace(
-              new RegExp("^" + env.VITE_APP_BASE_API),
-              env.VITE_APP_TARGET_BASE_API
-            ), // 替换 /dev-api 为 target 接口地址
+            path.replace(new RegExp("^" + env.VITE_APP_BASE_API), ""),
         },
       },
     },
     plugins: [
       vue(),
-      UnoCSS({}),
+      vueJsx(),
+      UnoCSS({
+        hmrTopLevelAwait: false,
+      }),
+      // 自动导入参考： https://github.com/sxzz/element-plus-best-practices/blob/main/vite.config.ts
       AutoImport({
         // 自动导入 Vue 相关函数，如：ref, reactive, toRef 等
         imports: ["vue", "@vueuse/core"],
+        // 自动导入 Element Plus 相关函数，如：ElMessage, ElMessageBox... (带样式)
+        resolvers: [ElementPlusResolver(), IconsResolver({})],
         eslintrc: {
           enabled: false,
           filepath: "./.eslintrc-auto-import.json",
           globalsPropValue: true,
         },
-        resolvers: [
-          // 自动导入 Element Plus 相关函数，如：ElMessage, ElMessageBox... (带样式)
-          ElementPlusResolver(),
-          IconsResolver({}),
-        ],
         vueTemplate: true,
         // 配置文件生成位置(false:关闭自动生成)
         dts: false,
-        // dts: "src/types/auto-imports.d.ts",
+        // dts: "types/auto-imports.d.ts",
       }),
 
       Components({
         resolvers: [
           // 自动导入 Element Plus 组件
           ElementPlusResolver(),
-          // 自动导入图标组件
-          IconsResolver({
-            // @iconify-json/ep 是 Element Plus 的图标库
-            enabledCollections: ["ep"],
-          }),
+          // 自动注册图标组件
+          IconsResolver({ enabledCollections: ["ep"] }),
         ],
         // 指定自定义组件位置(默认:src/components)
-        dirs: ["src/**/components"],
-        // 配置文件位置(false:关闭自动生成)
+        dirs: ["src/components", "src/**/components"],
+        // 配置文件位置 (false:关闭自动生成)
         dts: false,
-        // dts: "src/types/components.d.ts",
+        // dts: "types/components.d.ts",
       }),
 
       Icons({
-        // 自动安装图标库
         autoInstall: true,
       }),
-
       createSvgIconsPlugin({
         // 指定需要缓存的图标文件夹
-        iconDirs: [path.resolve(pathSrc, "assets/icons")],
+        iconDirs: [resolve(pathSrc, "assets/icons")],
         // 指定symbolId格式
         symbolId: "icon-[dir]-[name]",
       }),
-      // 代码压缩
-      viteCompression({
-        verbose: true, // 默认即可
-        disable: true, // 是否禁用压缩，默认禁用，true为禁用,false为开启，打开压缩需配置nginx支持
-        deleteOriginFile: true, // 删除源文件
-        threshold: 10240, // 压缩前最小文件大小
-        algorithm: "gzip", // 压缩算法
-        ext: ".gz", // 文件类型
-      }),
-
       viteMockServe({
         ignore: /^\_/,
         mockPath: "mock",
         enable: mode === "development",
-        // https://github.com/anncwb/vite-plugin-mock/issues/9
-      }),
-
-      visualizer({
-        filename: "./stats.html",
-        open: false,
-        gzipSize: true,
-        brotliSize: true,
       }),
     ],
     // 预加载项目必需的组件
@@ -185,6 +165,10 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
         "element-plus/es/components/rate/style/css",
         "element-plus/es/components/date-picker/style/css",
         "element-plus/es/components/notification/style/css",
+        "element-plus/es/components/image/style/css",
+        "element-plus/es/components/statistic/style/css",
+        "element-plus/es/components/watermark/style/css",
+        "element-plus/es/components/config-provider/style/css",
         "@vueuse/core",
         "sortablejs",
         "path-to-regexp",
@@ -192,10 +176,9 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
         "@wangeditor/editor",
         "@wangeditor/editor-for-vue",
         "vue-i18n",
-        "codemirror",
       ],
     },
-    // 构建
+    // 构建配置
     build: {
       chunkSizeWarningLimit: 2000, // 消除打包大小超过500kb警告
       minify: "terser", // Vite 2.6.x 以上需要配置 minify: "terser", terserOptions 才能生效

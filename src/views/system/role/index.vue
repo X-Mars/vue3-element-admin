@@ -8,7 +8,7 @@ import {
   getRoleMenuIds,
   updateRoleMenus,
 } from "@/api/role";
-import { listMenuOptions } from "@/api/menu";
+import { getMenuOptions } from "@/api/menu";
 
 import { RolePageVO, RoleForm, RoleQuery } from "@/api/role/types";
 
@@ -32,7 +32,8 @@ const queryParams = reactive<RoleQuery>({
 
 const roleList = ref<RolePageVO[]>();
 
-const dialog = reactive<DialogOption>({
+const dialog = reactive({
+  title: "",
   visible: false,
 });
 
@@ -175,7 +176,7 @@ function openMenuDialog(row: RolePageVO) {
     loading.value = true;
 
     // 获取所有的菜单
-    listMenuOptions().then((response) => {
+    getMenuOptions().then((response) => {
       menuList.value = response.data;
       // 回显角色已拥有的菜单
       getRoleMenuIds(roleId)
@@ -203,7 +204,7 @@ function handleRoleMenuSubmit() {
 
     loading.value = true;
     updateRoleMenus(roleId, checkedMenuIds)
-      .then((res) => {
+      .then(() => {
         ElMessage.success("分配权限成功");
         menuDialogVisible.value = false;
         resetQuery();
@@ -241,7 +242,7 @@ onMounted(() => {
       </el-form>
     </div>
 
-    <el-card shadow="never">
+    <el-card shadow="never" class="table-container">
       <template #header>
         <el-button type="success" @click="openDialog()"
           ><i-ep-plus />新增</el-button

@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 
 import { loginApi, logoutApi } from "@/api/auth";
-import { getUserInfo } from "@/api/user";
+import { getUserInfoApi } from "@/api/user";
 import { resetRouter } from "@/router";
 import { store } from "@/store";
 
@@ -11,16 +11,15 @@ import { UserInfo } from "@/api/user/types";
 import { useStorage } from "@vueuse/core";
 
 export const useUserStore = defineStore("user", () => {
-  // state
-  const userId = ref();
+  const user: UserInfo = {
+    roles: [],
+    perms: [],
+  };
+
   const token = useStorage("accessToken", "");
-  const nickname = ref("");
-  const avatar = ref("");
-  const roles = ref<Array<string>>([]); // 用户角色编码集合 → 判断路由权限
-  const perms = ref<Array<string>>([]); // 用户权限编码集合 → 判断按钮权限
 
   /**
-   * 登录调用
+   * 登录
    *
    * @param {LoginData}
    * @returns
@@ -40,21 +39,19 @@ export const useUserStore = defineStore("user", () => {
   }
 
   // 获取信息(用户昵称、头像、角色集合、权限集合)
-  function getInfo() {
+  function getUserInfo() {
     return new Promise<UserInfo>((resolve, reject) => {
-      getUserInfo()
+      getUserInfoApi()
         .then(({ data }) => {
           if (!data) {
-            return reject("Verification failed, please Login again.");
+            reject("Verification failed, please Login again.");
+            return;
           }
           if (!data.roles || data.roles.length <= 0) {
             reject("getUserInfo: roles must be a non-null array!");
+            return;
           }
-          userId.value = data.userId;
-          nickname.value = data.nickname;
-          avatar.value = data.avatar;
-          roles.value = data.roles;
-          perms.value = data.perms;
+          Object.assign(user, { ...data });
           resolve(data);
         })
         .catch((error) => {
@@ -63,13 +60,12 @@ export const useUserStore = defineStore("user", () => {
     });
   }
 
-  // 注销
+  // user logout
   function logout() {
     return new Promise<void>((resolve, reject) => {
       logoutApi()
         .then(() => {
-          resetRouter();
-          resetToken();
+          token.value = "";
           location.reload(); // 清空路由
           resolve();
         })
@@ -79,28 +75,22 @@ export const useUserStore = defineStore("user", () => {
     });
   }
 
-  // 重置
+  // remove token
   function resetToken() {
-    token.value = "";
-    nickname.value = "";
-    avatar.value = "";
-    roles.value = [];
-    perms.value = [];
+    return new Promise<void>((resolve) => {
+      token.value = "";
+      resetRouter();
+      resolve();
+    });
   }
+
   return {
     token,
-    nickname,
-    avatar,
-    roles,
-    perms,
+    user,
     login,
-    getInfo,
+    getUserInfo,
     logout,
     resetToken,
-    /**
-     * 当前登录用户ID
-     */
-    userId,
   };
 });
 

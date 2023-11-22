@@ -6,7 +6,6 @@
     "moduleResolution": "node",
     "strict": true,
     "noLib": false,
-    "jsx": "preserve",
     "sourceMap": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
@@ -16,18 +15,21 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["vite/client", "unplugin-icons/types/vue"],
+    "types": ["vite/client", "unplugin-icons/types/vue", "element-plus/global"],
     "skipLibCheck": true /* Skip type checking all .d.ts files. */,
     "allowSyntheticDefaultImports": true /* 允许默认导入 */,
-    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */
+    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
+
+    "jsx": "preserve",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment"
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.vue",
-    "src/types/**/*.d.ts",
+    "types/**/*.d.ts",
     "mock/**/*.ts",
     "vite.config.ts"
   ],
   "exclude": ["node_modules", "dist", "**/*.js"]
-  // "references": [{ "path": "./tsconfig.node.json" }]
 }

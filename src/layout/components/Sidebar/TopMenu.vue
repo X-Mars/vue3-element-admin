@@ -2,7 +2,7 @@
 import { usePermissionStore } from "@/store/modules/permission";
 import variables from "@/styles/variables.module.scss";
 import { useAppStore } from "@/store/modules/app";
-import { translateRouteTitleI18n } from "@/utils/i18n";
+import { translateRouteTitle } from "@/utils/i18n";
 import { useRouter } from "vue-router";
 const appStore = useAppStore();
 const activePath = computed(() => appStore.activeTopMenu);
@@ -56,18 +56,11 @@ onMounted(() => {
           <span v-if="route.path === '/'"> 首页 </span>
           <template v-else>
             <span v-if="route.meta && route.meta.title">
-              {{ translateRouteTitleI18n(route.meta.title) }}
+              {{ translateRouteTitle(route.meta.title) }}
             </span>
           </template>
         </template>
       </el-menu-item>
-      <!-- <sidebar-item
-        v-for="route in topMenu"
-        :key="route.path"
-        :item="route"
-        :base-path="route.path"
-        :is-collapse="false"
-      /> -->
     </el-menu>
   </el-scrollbar>
 </template>

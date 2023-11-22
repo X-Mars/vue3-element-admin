@@ -5,7 +5,7 @@ import { UserForm, UserInfo, UserPageVO, UserQuery } from "./types";
 /**
  * 登录成功后获取用户信息（昵称、头像、权限集合和角色集合）
  */
-export function getUserInfo(): AxiosPromise<UserInfo> {
+export function getUserInfoApi(): AxiosPromise<UserInfo> {
   return request({
     url: "/api/v1/users/me",
     method: "get",
@@ -63,20 +63,6 @@ export function updateUser(id: number, data: UserForm) {
     url: "/api/v1/users/" + id,
     method: "put",
     data: data,
-  });
-}
-
-/**
- * 修改用户状态
- *
- * @param id
- * @param status
- */
-export function updateUserStatus(id: number, status: number) {
-  return request({
-    url: "/api/v1/users/" + id + "/status",
-    method: "patch",
-    params: { status: status },
   });
 }
 

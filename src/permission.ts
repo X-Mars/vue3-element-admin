@@ -22,7 +22,7 @@ router.beforeEach(async (to, from, next) => {
       NProgress.done();
     } else {
       const userStore = useUserStoreHook();
-      const hasRoles = userStore.roles && userStore.roles.length > 0;
+      const hasRoles = userStore.user.roles && userStore.user.roles.length > 0;
       if (hasRoles) {
         // 未匹配到任何路由，跳转404
         if (to.matched.length === 0) {
@@ -32,7 +32,7 @@ router.beforeEach(async (to, from, next) => {
         }
       } else {
         try {
-          const { roles } = await userStore.getInfo();
+          const { roles } = await userStore.getUserInfo();
           const accessRoutes = await permissionStore.generateRoutes(roles);
           accessRoutes.forEach((route) => {
             router.addRoute(route);

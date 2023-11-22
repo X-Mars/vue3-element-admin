@@ -2,9 +2,10 @@
  * 登录用户信息
  */
 export interface UserInfo {
-  userId: number;
-  nickname: string;
-  avatar: string;
+  userId?: number;
+  username?: string;
+  nickname?: string;
+  avatar?: string;
   roles: string[];
   perms: string[];
 }
@@ -16,6 +17,8 @@ export interface UserQuery extends PageQuery {
   keywords?: string;
   status?: number;
   deptId?: number;
+  startTime?: string;
+  endTime?: string;
 }
 
 /**

@@ -1,78 +1,114 @@
 <!-- websocket 示例 -->
 <script setup lang="ts">
-import { sendToAll, sendToUser } from "@/api/websocket"; // 点对点消息列表
+import SockJS from "sockjs-client";
+import Stomp from "stompjs";
 
-import { useUserStore } from "@/store/modules/user";
+import { useUserStoreHook } from "@/store/modules/user";
 
-import { useWebSocket } from "@vueuse/core";
+const userStore = useUserStoreHook();
 
-const inputVal = ref("初始内容");
+const isConnected = ref(false);
+const socketEndpoint = ref("http://47.117.115.107:8989/ws"); // 线上
+// const socketEndpoint = ref("http://localhost:8989/ws"); // 本地
 
-const topicMsgs = ref<string[]>(["接收到一条主题消息"]); // 主题消息列表
-const p2pMsgs = ref<string[]>(["接收到一条点对线消息"]);
+const receiver = ref("root");
 
-const userId = useUserStore().userId;
+interface MessageType {
+  type?: string; // 消息类型： tip-提示消息
+  sender?: string;
+  content: string;
+}
 
-const { data, status, close, send, open } = useWebSocket(
-  "ws://localhost:8989/ws",
-  {
-    onConnected(ws) {
-      console.log("订阅主题");
-      // 连接建立后发送订阅消息
-      ws.send(JSON.stringify({ type: "subscribe", topic: "/topic/all" }));
-    },
-    onMessage(ws, event) {
-      // 获取接收到的消息内容
-      const message = event.data;
+const messages = ref<MessageType[]>([]);
 
-      // 处理消息内容
-      console.log("Received message:", message);
-    },
-  }
+const topicMessage = ref(
+  "亲爱的大冤种们，由于一只史诗级的BUG，系统版本已经被迫回退到了0.0.1。"
+); // 广播消息
+
+const queneMessage = ref(
+  "hi , " +
+    receiver.value +
+    " , 我是" +
+    userStore.user.username +
+    " , 想和你交个朋友 ! "
 );
 
-// 监听 WebSocket 连接状态变化
-watch(status, (newStatus) => {
-  if (newStatus === "OPEN") {
-    // 连接已打开，订阅主题
-    console.log(" 连接已打开，订阅主题");
-    const subscribeMessage = {
-      type: "subscribe",
-      channel: "/topic/all",
-    };
-    send(JSON.stringify(subscribeMessage));
-  } else if (newStatus === "CLOSED") {
-    // 连接已关闭，执行相应的清理操作
-    // ...
-  }
-});
-
-// 监听 WebSocket 接收到的消息
-watch(data, (newData) => {
-  console.log("Received data:", newData);
-
-  // 解析消息体
-  const message = JSON.parse(newData);
-
-  // 判断消息主题并处理
-  if (message.topic === "topic1") {
-    // 处理来自 topic1 的消息
-    console.log("Received message from topic1:", message);
-  } else if (message.topic === "topic2") {
-    // 处理来自 topic2 的消息
-    console.log("Received message from topic2:", message);
-  }
-  // 可以根据需要添加更多的判断逻辑来处理其他主题的消息
-});
-
-function handleSendToAll() {
-  sendToAll(inputVal.value);
+function sendToAll() {
+  stompClient.send("/app/sendToAll", {}, topicMessage.value);
+  messages.value.push({
+    sender: userStore.user.username,
+    content: topicMessage.value,
+  });
 }
 
-function handleSendToUser() {
-  sendToUser(userId, inputVal.value);
+function sendToUser() {
+  stompClient.send("/app/sendToUser/" + receiver.value, {}, queneMessage.value);
+  messages.value.push({
+    sender: userStore.user.username,
+    content: queneMessage.value,
+  });
 }
-onMounted(() => {});
+
+let stompClient: Stomp.Client;
+
+function connectWebSocket() {
+  let socket = new SockJS(socketEndpoint.value);
+
+  stompClient = Stomp.over(socket);
+
+  stompClient.connect(
+    { Authorization: userStore.token },
+    () => {
+      isConnected.value = true;
+      messages.value.push({
+        sender: "Server",
+        content: "Websocket 已连接",
+        type: "tip",
+      });
+
+      stompClient.subscribe("/topic/notice", (res: any) => {
+        messages.value.push({
+          sender: "Server",
+          content: res.body,
+        });
+      });
+
+      stompClient.subscribe("/user/queue/greeting", (res) => {
+        const messageData = JSON.parse(res.body) as MessageType;
+        messages.value.push({
+          sender: messageData.sender,
+          content: messageData.content,
+        });
+      });
+    },
+    (error) => {
+      console.log("连接失败: " + error);
+      isConnected.value = false; // 更新连接状态
+      messages.value.push({
+        sender: "Server",
+        content: "Websocket 已断开",
+        type: "tip",
+      });
+    }
+  );
+}
+
+function disconnectWebSocket() {
+  if (stompClient && stompClient.connected) {
+    stompClient.disconnect(() => {
+      isConnected.value = false; // 更新连接状态
+      messages.value.push({
+        sender: "Server",
+        content: "Websocket 已断开",
+        type: "tip",
+      });
+    });
+  }
+}
+
+onMounted(() => {
+  connectWebSocket();
+});
 </script>
 
 <template>
@@ -84,36 +120,147 @@ onMounted(() => {});
       class="mb-[20px]"
       >示例源码 请点击>>>></el-link
     >
+    <el-row :gutter="10">
+      <el-col :span="12">
+        <el-card>
+          <el-row>
+            <el-col :span="16">
+              <el-input v-model="socketEndpoint" class="w-220px" />
+              <el-button
+                type="primary"
+                class="ml-5"
+                @click="connectWebSocket"
+                :disabled="isConnected"
+                >连接</el-button
+              >
+              <el-button
+                type="danger"
+                @click="disconnectWebSocket"
+                :disabled="!isConnected"
+                >断开</el-button
+              >
+            </el-col>
 
-    <div>
-      <div class="search-container">
-        <el-form :inline="true">
-          <el-form-item> <el-input v-model="inputVal" /></el-form-item>
-          <el-form-item
-            ><el-button @click="handleSendToUser">发送点对点消息</el-button>
-            <el-button @click="handleSendToAll">发送广播消息</el-button>
-          </el-form-item>
-        </el-form>
-      </div>
+            <el-col :span="8" class="text-right">
+              连接状态：
+              <el-tag class="ml-2" type="success" v-if="isConnected"
+                >已连接</el-tag
+              >
+              <el-tag class="ml-2" type="info" v-else>已断开</el-tag>
+            </el-col>
+          </el-row>
+        </el-card>
 
-      <el-row :gutter="20">
-        <el-col :span="12">
-          <el-card>
-            <template #header>点对点消息接收 </template>
-            <div v-for="(msg, index) in p2pMsgs" :key="index">
-              {{ msg }}
+        <el-card class="mt-5">
+          <el-form label-width="90px">
+            <el-form-item label="消息内容">
+              <el-input type="textarea" v-model="topicMessage" />
+            </el-form-item>
+
+            <el-form-item>
+              <el-button @click="sendToAll" type="primary">发送广播</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
+        <el-card class="mt-5">
+          <el-form label-width="90px">
+            <el-form-item label="消息内容">
+              <el-input type="textarea" v-model="queneMessage" />
+            </el-form-item>
+            <el-form-item label="消息接收人">
+              <el-input v-model="receiver" />
+            </el-form-item>
+            <el-form-item>
+              <el-button @click="sendToUser" type="primary"
+                >发送点对点消息</el-button
+              >
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </el-col>
+
+      <el-col :span="12">
+        <el-card>
+          <div class="message-container">
+            <div
+              v-for="(message, index) in messages"
+              :key="index"
+              :class="{
+                'tip-message': message.type === 'tip',
+                message: message.type !== 'tip',
+                'message--sent': message.sender === userStore.user.username,
+                'message--received': message.sender !== userStore.user.username,
+              }"
+            >
+              <div v-if="message.type != 'tip'" class="message-content">
+                <div
+                  :class="{
+                    'message-sender':
+                      message.sender === userStore.user.username,
+                    'message-receiver':
+                      message.sender !== userStore.user.username,
+                  }"
+                >
+                  {{ message.sender }}
+                </div>
+                <div class="color-#333">{{ message.content }}</div>
+              </div>
+              <div v-else>{{ message.content }}</div>
             </div>
-          </el-card>
-        </el-col>
-        <el-col :span="12">
-          <el-card>
-            <template #header> 广播消息接收 </template>
-            <div v-for="(msg, index) in topicMsgs" :key="index">
-              {{ msg }}
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
+
+<style scoped>
+.message-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.message {
+  padding: 10px;
+  margin: 10px;
+  border-radius: 5px;
+}
+
+.message--sent {
+  align-self: flex-end;
+  background-color: #dcf8c6;
+}
+
+.message--received {
+  align-self: flex-start;
+  background-color: #e8e8e8;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-sender {
+  margin-bottom: 5px;
+  font-weight: bold;
+  text-align: right;
+}
+
+.message-receiver {
+  margin-bottom: 5px;
+  font-weight: bold;
+  text-align: left;
+}
+
+.tip-message {
+  align-self: center;
+  padding: 5px 10px;
+  margin-bottom: 5px;
+  font-style: italic;
+  text-align: center;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+}
+</style>
